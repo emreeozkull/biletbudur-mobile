@@ -7,9 +7,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View
 } from 'react-native';
 // Adjust import paths relative to the app/ directory
+import { useRouter } from 'expo-router';
 import EventCard from '../src/components/EventCard';
 import Header from '../src/components/Header';
 import PerformerItem from '../src/components/PerformerItem';
@@ -23,6 +25,7 @@ interface Event {
   name: string | string[];
   venue_name?: string | string[];
   date?: string;
+  description?: string;
   // Add other potential event properties if known
 }
 
@@ -81,6 +84,7 @@ export default function Index() {
 
   // Type the FlatList ref
   const popularFlatListRef = useRef<FlatList<Event>>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const loadData = async () => {
@@ -130,9 +134,31 @@ export default function Index() {
     }
   }, [popularEvents]); // Dependency array is correct
 
+  // --- Navigation Handler ---
+  const handleEventPress = (rawEventId: string | number) => {
+    // Convert to string and extract the part before the underscore
+    const eventIdString = String(rawEventId);
+    const uuidPart = eventIdString.split('_')[0]; 
+    
+    if (uuidPart) { // Ensure we got a valid part
+        router.push(`/event/${uuidPart}`);
+    } else {
+        console.warn(`Could not extract valid ID part from: ${rawEventId}`);
+    }
+  };
+  // --- End Navigation Handler ---
+
   // Add type to renderItem props
-  const renderPopularItem = ({ item }: ListRenderItemInfo<Event>) => <PopularEventItem event={item} />;
-  const renderEventCard = ({ item }: ListRenderItemInfo<Event>) => <EventCard event={item} />;
+  const renderPopularItem = ({ item }: ListRenderItemInfo<Event>) => (
+    <TouchableOpacity onPress={() => handleEventPress(item.id)}>
+      <PopularEventItem event={item} />
+    </TouchableOpacity>
+  );
+  const renderEventCard = ({ item }: ListRenderItemInfo<Event>) => (
+    <TouchableOpacity onPress={() => handleEventPress(item.id)}>
+      <EventCard event={item} />
+    </TouchableOpacity>
+  );
   const renderPerformerItem = ({ item }: ListRenderItemInfo<Performer>) => <PerformerItem performer={item} />;
 
   // Use View instead of SafeAreaView as SafeArea is often handled by the layout
