@@ -16,35 +16,21 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## For cursor
+this commands is used
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
+npx expo create-expo-app@3.4.2 
 npm run reset-project
-```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+# Planning 
+the header should be with logo that is clicable and search icon, account icon and hamburger menu
 
-## Learn more
+the main page needs to be an event cards and populated with data from 
+"https://solr.biletbudur.tr/solr/core_2/select?indent=true&q.op=OR&q=*%3A*&rows=5"
+the test_result.json in results and make the cards based on this. 
+the images in cards must be fetched from "https://django-s3-test1.s3.eu-central-1.amazonaws.com/" and fallowed witg the responses "main_img" part without the media part 
 
-To learn more about developing your project with Expo, look at the following resources:
+there must be an performers as well. create them with dummy values for now. 
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-## Join the community
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

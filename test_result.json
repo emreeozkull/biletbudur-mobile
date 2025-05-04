@@ -1,0 +1,78 @@
+{
+  "responseHeader":{
+    "status":0,
+    "QTime":0,
+    "params":{
+      "q":"*:*",
+      "indent":"true",
+      "q.op":"OR",
+      "rows":"5"
+    }
+  },
+  "response":{
+    "numFound":220,
+    "start":0,
+    "numFoundExact":true,
+    "docs":[{
+      "id":"e7ffe306-f171-4ceb-bac4-e9fe8b98b765_1737561633619",
+      "name":["Teoman'ın Koyu Antoloji'si"],
+      "performers":["Korhan Futac","Teoman"],
+      "venue_name":["İstanbul Kongre Merkezi"],
+      "url":"https://www.passo.com.tr/tr/etkinlik/teomanin-koyu-antolojisi-istanbul-kongre-merkezi-konser-biletleri/7448328",
+      "main_img":["/media/main_page_images/11112024175620-teoman_koyu_antoloji_passo_11PKiia.jpg"],
+      "seller":["Passo"],
+      "date":"2025-01-18T21:00:00Z",
+      "prices":[600.0],
+      "_version_":1821965429027897344,
+      "_root_":"e7ffe306-f171-4ceb-bac4-e9fe8b98b765_1737561633619"
+    },{
+      "id":"0c7a1a70-8db0-402b-bc63-065759d61459_1737561633621",
+      "name":["Drakula"],
+      "performers":["Ahmet Güvenç","BERKAY KUŞKONMAZ","BURCU UÇATENİK","Bram Stoker","Drakula","DİLARA SUER","DİLAY YILDIZ","ELİF ALEYNA ÖZDEM","GİZEM ERDEM","Hayko Cepk","KORHAN BAŞARAN","Kurtalan Ekspres","NEVZAT KA","NİHAL USANMAZ","OKAN BAYÜLGEN","Okan Bayülgen","UĞURCAN UĞURLUER","Van Helsing","YILDIZ GÖKMEN"],
+      "venue_name":["Maximum UNIQ Hall"],
+      "url":"https://www.passo.com.tr/tr/etkinlik/drakula-maximum-uniq-hall-biletleri/7477321",
+      "main_img":["/media/main_page_images/21012025125031-drakula_210125.jpg"],
+      "seller":["Passo"],
+      "date":"2025-01-22T21:00:00Z",
+      "prices":[2200.0],
+      "_version_":1821965429033140224,
+      "_root_":"0c7a1a70-8db0-402b-bc63-065759d61459_1737561633621"
+    },{
+      "id":"2ac2dd65-95a4-41ae-b99a-97684eb4a8de_1737561633623",
+      "name":["23 Ocak | Yerebatan Sarnıcı | The Basilica Cistern"],
+      "performers":["Byzantine Emperor","Entranc","I. Justinianus","Justinianus"],
+      "venue_name":["Yerebatan Sarnıcı | The Basilica Cistern"],
+      "url":"https://www.passo.com.tr/tr/etkinlik/yerebatan-sarnici-the-basilica-cistern-muze-bileti/7678341",
+      "main_img":["/media/main_page_images/25072022104959-yerebatan_kapak_11_lKNnOy1.jpg"],
+      "seller":["Passo"],
+      "date":"2025-01-23T09:00:00Z",
+      "prices":[55.0],
+      "_version_":1821965429035237376,
+      "_root_":"2ac2dd65-95a4-41ae-b99a-97684eb4a8de_1737561633623"
+    },{
+      "id":"93f72f0c-5802-4415-be27-aa8e97a0e43e_1737561633625",
+      "name":["Hayvan Çiftliği"],
+      "performers":["Aylin Konten","Barış Erdenk","Eser Karabil","George Orwell","Gürkan Çakıc","Kemal Yiğitcan","Moses","Muharrem Özcan","Napoleon","Sibel Erdenk","Turan Bölükbaş","Umut Temizaş","Zerrin Akdenizl"],
+      "venue_name":["Caddebostan Kültür Merkezi - İstanbul"],
+      "url":"https://www.passo.com.tr/tr/etkinlik/hayvan-ciftligi-caddebostan-kultur-merkezi-tiyatro-biletleri/7613329",
+      "main_img":["/media/main_page_images/12122024134220-1920x1080_QyHJenF.jpg"],
+      "seller":["Passo"],
+      "date":"2025-01-23T20:30:00Z",
+      "prices":[728.0],
+      "_version_":1821965429036285952,
+      "_root_":"93f72f0c-5802-4415-be27-aa8e97a0e43e_1737561633625"
+    },{
+      "id":"fd11f02f-f9c0-45d1-9a9e-ee05476a5ebc_1737561633627",
+      "name":["24 Ocak | Yerebatan Sarnıcı | The Basilica Cistern"],
+      "performers":["Byzantine Emperor","Entranc","I. Justinianus","Justinianus"],
+      "venue_name":["Yerebatan Sarnıcı | The Basilica Cistern"],
+      "url":"https://www.passo.com.tr/tr/etkinlik/yerebatan-sarnici-the-basilica-cistern-muze-bileti/7678342",
+      "main_img":["/media/main_page_images/25072022104959-yerebatan_kapak_11_EUlUVSB.jpg"],
+      "seller":["Passo"],
+      "date":"2025-01-24T09:00:00Z",
+      "prices":[55.0],
+      "_version_":1821965429038383104,
+      "_root_":"fd11f02f-f9c0-45d1-9a9e-ee05476a5ebc_1737561633627"
+    }]
+  }
+}
