@@ -30,16 +30,23 @@ const styles = StyleSheet.create({
   container: {
     width: CAROUSEL_ITEM_WIDTH,
     height: CAROUSEL_ITEM_HEIGHT,
-    borderRadius: 8,
+    borderRadius: 12, // Increased border radius
     overflow: 'hidden',
     // marginRight: 10, // Add margin if items shouldn't touch edge-to-edge when scrolling
+    elevation: 3, // Add subtle elevation
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    backgroundColor: '#FFFFFF', // Ensure background for shadow visibility
   },
   image: {
     width: '100%',
     height: '100%',
+    borderRadius: 12, // Match container radius
   },
   imagePlaceholder: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#E0E0E0', // Lighter placeholder color
   },
 });
 

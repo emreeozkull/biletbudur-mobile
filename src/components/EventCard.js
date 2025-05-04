@@ -2,8 +2,8 @@ import React from 'react';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
-// Make cards smaller for horizontal view
-const CARD_WIDTH = width * 0.6; // 60% of screen width, adjust as needed
+// Make cards slightly wider
+const CARD_WIDTH = width * 0.65; // 65% of screen width
 const CARD_MARGIN_RIGHT = 15;
 const IMAGE_BASE_URL = "https://django-s3-test1.s3.eu-central-1.amazonaws.com/";
 
@@ -27,7 +27,7 @@ const EventCard = ({ event }) => {
       const dateObj = new Date(event.date);
       if (!isNaN(dateObj)) { // Check if date is valid
         formattedDate = dateObj.toLocaleString('en-US', {
-          year: 'numeric',
+          // year: 'numeric', // Keep it concise for card view
           month: 'short',
           day: 'numeric',
           hour: 'numeric',
@@ -53,7 +53,7 @@ const EventCard = ({ event }) => {
         <View style={[styles.image, styles.imagePlaceholder]} />
       )}
       <View style={styles.infoContainer}>
-        <Text style={styles.title} numberOfLines={2}>{eventName}</Text> 
+        <Text style={styles.title} numberOfLines={2}>{eventName}</Text>
         <Text style={styles.venue} numberOfLines={1}>{venueName}</Text>
         <Text style={styles.date}>{formattedDate}</Text>
       </View>
@@ -64,41 +64,49 @@ const EventCard = ({ event }) => {
 const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF', // Use pure white
+    borderRadius: 12, // Slightly larger radius
     overflow: 'hidden',
     marginRight: CARD_MARGIN_RIGHT,
-    elevation: 3,
+    elevation: 4, // Slightly increased elevation
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.15, // Softer shadow
+    shadowRadius: 4, // Softer shadow
+    marginBottom: 5, // Add some bottom margin if needed
   },
   image: {
     width: '100%',
-    height: 150,
+    height: 160, // Slightly taller image
+    borderTopLeftRadius: 12, // Match card radius
+    borderTopRightRadius: 12, // Match card radius
   },
   imagePlaceholder: {
     width: '100%',
-    height: 150,
-    backgroundColor: '#eee',
+    height: 160,
+    backgroundColor: '#E0E0E0', // Lighter placeholder
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   infoContainer: {
-    padding: 10,
+    paddingVertical: 12, // More vertical padding
+    paddingHorizontal: 10,
+    // backgroundColor: '#f9f9f9', // Optional subtle background
   },
   title: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 16, // Slightly larger title
+    fontWeight: '600', // Semi-bold
+    color: '#111', // Darker title color
+    marginBottom: 5,
   },
   venue: {
-    fontSize: 13,
-    color: '#555',
-    marginBottom: 6,
+    fontSize: 14, // Slightly larger venue text
+    color: '#444', // Slightly darker grey
+    marginBottom: 8, // More space before date
   },
   date: {
-    fontSize: 12,
-    color: '#777',
+    fontSize: 13, // Slightly larger date text
+    color: '#666', // Medium grey
   },
 });
 
