@@ -1,8 +1,12 @@
 import { Ionicons } from '@expo/vector-icons'; // Import icons
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react'; // Import useEffect, useState
 import {
     ActivityIndicator,
+    Alert // Import Alert
+    ,
+
+
     FlatList,
     ScrollView,
     StyleSheet,
@@ -12,6 +16,7 @@ import {
 } from 'react-native';
 import FavoritePerformerItem from '../components/FavoritePerformerItem'; // Import the new component
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
+import { fetchFavoriteEvents, fetchPastFavoriteEvents } from '../services/authApi'; // Import both API functions
 
 // Reusable Card component for sections
 const InfoCard = ({ title, iconName, children }) => (
@@ -27,8 +32,59 @@ const InfoCard = ({ title, iconName, children }) => (
 );
 
 const ProfileScreen = () => {
-  const { user, logout, loading } = useAuth(); // Get user details and logout function
+  const { user, logout, loading: authLoading } = useAuth(); // Rename auth loading
   const router = useRouter();
+
+  // State for Saved Events
+  const [savedEvents, setSavedEvents] = useState([]);
+  const [savedEventsLoading, setSavedEventsLoading] = useState(true);
+  const [savedEventsError, setSavedEventsError] = useState(null);
+
+  // State for Past Saved Events
+  const [pastEvents, setPastEvents] = useState([]);
+  const [pastEventsLoading, setPastEventsLoading] = useState(true);
+  const [pastEventsError, setPastEventsError] = useState(null);
+
+  // Fetch data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) return;
+
+      // Fetch Saved Events
+      setSavedEventsLoading(true);
+      setSavedEventsError(null);
+      const savedResult = await fetchFavoriteEvents();
+      if (savedResult.success) {
+        setSavedEvents(savedResult.data || []);
+      } else {
+        setSavedEventsError(savedResult.error || 'Failed to load saved events.');
+        if (savedResult.status === 401) {
+          Alert.alert("Session Expired", "Please log in again.");
+          await logout();
+          return; // Stop further processing if logged out
+        }
+      }
+      setSavedEventsLoading(false);
+
+      // Fetch Past Saved Events
+      setPastEventsLoading(true);
+      setPastEventsError(null);
+      const pastResult = await fetchPastFavoriteEvents();
+      if (pastResult.success) {
+        setPastEvents(pastResult.data || []);
+      } else {
+        setPastEventsError(pastResult.error || 'Failed to load past events.');
+        // Handle 401 for past events as well, although less critical if first call failed
+        if (pastResult.status === 401 && !savedResult.error) { // Check if not already handled
+             Alert.alert("Session Expired", "Please log in again.");
+             await logout();
+        }
+      }
+      setPastEventsLoading(false);
+    };
+
+    loadData();
+  }, [user]); // Refetch if user changes
 
   const handleLogout = async () => {
     await logout();
@@ -43,50 +99,6 @@ const ProfileScreen = () => {
       { id: 'p4', name: 'DJ D', imageUrl: null },
       { id: 'p5', name: 'Singer E', imageUrl: null },
       { id: 'p6', name: 'Musician F', imageUrl: null },
-  ];
-  const savedEvents = [
-      {
-          id: 'se1',
-          name: 'Upcoming Concert',
-          date: '2024-09-15T20:00:00Z',
-          venue_name: 'Grand Arena',
-          performers: ['Headline Act', 'Support Band'],
-          main_img_url: 'https://via.placeholder.com/600x400/007AFF/FFFFFF?text=Event+Image+1' // Placeholder image URL
-      },
-      {
-          id: 'se2',
-          name: 'Theatre Show Next Week',
-          date: '2024-08-28T19:30:00Z',
-          venue_name: 'Royal Theatre',
-          performers: ['Lead Actor', 'Ensemble Cast'],
-          main_img_url: 'https://via.placeholder.com/600x400/28A745/FFFFFF?text=Event+Image+2'
-      },
-      {
-          id: 'se3',
-          name: 'Art Exhibition Opening',
-          date: '2024-10-01T18:00:00Z',
-          venue_name: 'Modern Art Gallery',
-          performers: ['Featured Artist'],
-          main_img_url: null // Example with no image
-      },
-  ];
-  const pastEvents = [
-      {
-          id: 'pe1',
-          name: 'Festival Last Month',
-          date: '2024-07-10T14:00:00Z',
-          venue_name: 'City Park',
-          performers: ['Band X', 'Singer Y', 'DJ Z'],
-          main_img_url: 'https://via.placeholder.com/600x400/FF9500/FFFFFF?text=Past+Event+1'
-      },
-      {
-          id: 'pe2',
-          name: 'Movie Screening',
-          date: '2024-06-22T21:00:00Z',
-          venue_name: 'Indie Cinema',
-          performers: [], // Event might have no listed performers
-          main_img_url: 'https://via.placeholder.com/600x400/5E5CE6/FFFFFF?text=Past+Event+2'
-      },
   ];
 
   // --- Helper function to format date (similar to EventCard) ---
@@ -109,7 +121,7 @@ const ProfileScreen = () => {
     return ''; // Return empty string on error or invalid date
   };
 
-  if (loading || !user) {
+  if (authLoading || !user) {
     // Show loading indicator while auth state is resolving or if user is unexpectedly null
     return (
       <View style={[styles.screen, styles.centered]}>
@@ -140,6 +152,54 @@ const ProfileScreen = () => {
       });
   };
 
+  // --- Helper to render saved events content (loading/error/data) ---
+  const renderSavedEventsContent = () => {
+      if (savedEventsLoading) {
+          return <ActivityIndicator style={styles.loadingIndicator} size="small" color="#007AFF" />;
+      }
+      if (savedEventsError) {
+          return <Text style={styles.errorText}>{savedEventsError}</Text>;
+      }
+      if (savedEvents.length === 0) {
+          return <Text style={styles.placeholderText}>No saved events.</Text>;
+      }
+      return savedEvents.map((event) => (
+          <TouchableOpacity 
+            key={`saved-${event.id}`} 
+            style={styles.eventItemContainer} 
+            onPress={() => handleSavedEventPress(event)}
+          >
+            {/* Check if event.name exists, API might return different structure */}
+            <Text style={styles.listItem}>{event.name || 'Unnamed Event'}</Text> 
+            <Text style={styles.listSubItem}>{formatEventDate(event.date)}</Text>
+          </TouchableOpacity>
+      ));
+  };
+
+  // --- Helper to render PAST saved events content (loading/error/data) ---
+  const renderPastEventsContent = () => {
+      if (pastEventsLoading) {
+          return <ActivityIndicator style={styles.loadingIndicator} size="small" color="#007AFF" />;
+      }
+      if (pastEventsError) {
+          return <Text style={styles.errorText}>{pastEventsError}</Text>;
+      }
+      if (pastEvents.length === 0) {
+          return <Text style={styles.placeholderText}>No past saved events found.</Text>;
+      }
+      // Assuming past events have the same structure as saved events for the detail screen
+      return pastEvents.map((event) => (
+          <TouchableOpacity 
+            key={`past-${event.id}`} 
+            style={styles.eventItemContainer} 
+            onPress={() => handleSavedEventPress(event)} // Use the same handler
+          >
+            <Text style={styles.listItem}>{event.name || 'Unnamed Event'}</Text> 
+            <Text style={styles.listSubItem}>{formatEventDate(event.date)}</Text>
+          </TouchableOpacity>
+      ));
+  };
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContainer}>
       {/* Profile Header */}
@@ -167,45 +227,19 @@ const ProfileScreen = () => {
         )}
       </InfoCard>
 
-      {/* Saved Events Section - Updated to be Clickable */}
+      {/* Saved Events Section - Use render helper */}
       <InfoCard title="Saved Events" iconName="bookmark-outline">
-        {savedEvents.length > 0 ? (
-          savedEvents.map((event) => (
-            <TouchableOpacity 
-              key={`saved-${event.id}`} 
-              style={styles.eventItemContainer} 
-              onPress={() => handleSavedEventPress(event)} // Use handler
-            >
-              <Text style={styles.listItem}>{event.name}</Text>
-              <Text style={styles.listSubItem}>{formatEventDate(event.date)}</Text>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.placeholderText}>No saved events.</Text>
-        )}
+        {renderSavedEventsContent()}
       </InfoCard>
 
-      {/* Past Saved Events Section - Updated to be Clickable */}
+      {/* Past Saved Events Section - Use render helper */}
       <InfoCard title="Past Saved Events" iconName="time-outline">
-        {pastEvents.length > 0 ? (
-          pastEvents.map((event) => (
-             <TouchableOpacity 
-               key={`past-${event.id}`} 
-               style={styles.eventItemContainer} 
-               onPress={() => handleSavedEventPress(event)} // Use the same handler
-             >
-               <Text style={styles.listItem}>{event.name}</Text>
-               <Text style={styles.listSubItem}>{formatEventDate(event.date)}</Text>
-             </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.placeholderText}>No past events found.</Text>
-        )}
+        {renderPastEventsContent()}
       </InfoCard>
 
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={loading}>
-        {loading ? (
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={authLoading}>
+        {authLoading ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
           <Text style={styles.logoutButtonText}>Logout</Text>
@@ -333,6 +367,16 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     paddingVertical: 10,
+  },
+  errorText: {
+      fontSize: 14,
+      color: '#FF3B30', // Error color
+      textAlign: 'center',
+      paddingVertical: 10,
+  },
+  loadingIndicator: {
+      marginTop: 10,
+      marginBottom: 10,
   },
   logoutButton: {
     marginHorizontal: 20,

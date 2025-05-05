@@ -2,18 +2,45 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Replace with your actual backend base URL if it's different
-const API_BASE_URL = 'https://www.biletbudur.tr/accounts/api/'; // Example: Adjust if your backend runs elsewhere
+const API_BASE_URL = 'https://www.biletbudur.tr'; // Example: Adjust if your backend runs elsewhere
 
+// --- Unauthenticated client (for login/register) ---
 const authApiClient = axios.create({
-  baseURL: `${API_BASE_URL}`,
-  timeout: 5000, // 5 second timeout
+  baseURL: `${API_BASE_URL}/accounts/api/`,
+  timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   }
 });
 
-// Function to register a new user
+// --- Authenticated client (for requests requiring login) ---
+const apiClient = axios.create({
+    baseURL: API_BASE_URL, // Use base URL for other endpoints
+    timeout: 5000,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }
+});
+
+// Interceptor to automatically add the JWT token to requests
+apiClient.interceptors.request.use(
+    async (config) => {
+        const accessToken = await SecureStore.getItemAsync('accessToken');
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// --- API Functions --- 
+
+// Register (uses unauthenticated client)
 export const registerUser = async (userData) => {
   try {
     // README mentions email, password, password2, first_name, last_name
@@ -29,7 +56,7 @@ export const registerUser = async (userData) => {
   }
 };
 
-// Function to log in and get tokens
+// Login (uses unauthenticated client)
 export const loginUser = async (credentials) => {
   try {
     // README mentions email and password for token endpoint
@@ -50,7 +77,7 @@ export const loginUser = async (credentials) => {
   }
 };
 
-// Function to log out (clear tokens)
+// Logout (no client needed, just clears storage)
 export const logoutUser = async () => {
     try {
         await SecureStore.deleteItemAsync('accessToken');
@@ -60,6 +87,37 @@ export const logoutUser = async () => {
     } catch (error) {
         console.error('Logout Error:', error);
         return { success: false, error: 'Logout failed' };
+    }
+};
+
+// Fetch Favorite Events (uses authenticated client)
+export const fetchFavoriteEvents = async () => {
+    try {
+        const response = await apiClient.get('/scrape/api/favorites/');
+        return { success: true, data: response.data };
+    } catch (error) {
+        console.error('Fetch Favorites API Error:', error.response?.status, error.response?.data || error.message);
+        if (error.response?.status === 401) {
+            console.warn("Access token likely expired. Refresh needed.");
+            return { success: false, error: 'Unauthorized', status: 401 };
+        }
+        return { success: false, error: error.response?.data || 'Failed to fetch favorites' };
+    }
+};
+
+// Fetch Past Favorite Events (uses authenticated client)
+export const fetchPastFavoriteEvents = async () => {
+    try {
+        // Endpoint based on user query: /scrape/api/past-favorites/
+        const response = await apiClient.get('/scrape/api/past-favorites/');
+        return { success: true, data: response.data };
+    } catch (error) {
+        console.error('Fetch Past Favorites API Error:', error.response?.status, error.response?.data || error.message);
+        if (error.response?.status === 401) {
+            console.warn("Access token likely expired. Refresh needed.");
+            return { success: false, error: 'Unauthorized', status: 401 };
+        }
+        return { success: false, error: error.response?.data || 'Failed to fetch past favorites' };
     }
 };
 
