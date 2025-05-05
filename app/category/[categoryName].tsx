@@ -10,7 +10,7 @@ import {
     View
 } from 'react-native';
 import EventCard from '../../src/components/EventCard';
-import { fetchEvents } from '../../src/services/api';
+import { fetchEventsByCategory } from '../../src/services/api';
 
 // Reuse or import the Event interface
 interface Event {
@@ -43,15 +43,15 @@ export default function CategoryDetailScreen() {
       setLoading(true);
       setError(null);
       try {
-        // Fetch ALL events - API currently doesn't support category filtering
-        console.log(`Fetching all events for category page: ${categoryName}`);
-        const allEventsData: Event[] = await fetchEvents(); 
+        // Use the new category-specific fetch function
+        console.log(`Fetching events for category: ${categoryName}`);
+        const categoryEventsData: Event[] = await fetchEventsByCategory(categoryName); 
         
-        // TODO: Implement client-side filtering if needed
-        setEvents(allEventsData); 
+        // Assuming categoryEventsData is the array of events
+        setEvents(categoryEventsData); 
 
       } catch (err: any) {
-        console.error("Failed to load events for category:", err);
+        console.error(`Failed to load events for category ${categoryName}:`, err);
         setError(`Failed to load events: ${err.message}`);
       } finally {
         setLoading(false);
