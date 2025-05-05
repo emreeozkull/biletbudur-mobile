@@ -2,15 +2,16 @@ import React from 'react';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
-// Make cards slightly wider
-const CARD_WIDTH = width * 0.65; // 65% of screen width
-const CARD_MARGIN_RIGHT = 15;
+// Original dimensions for horizontal scroll
+const HORIZONTAL_CARD_WIDTH = width * 0.65;
+const HORIZONTAL_CARD_MARGIN_RIGHT = 15;
 const IMAGE_BASE_URL = "https://django-s3-test1.s3.eu-central-1.amazonaws.com/";
 
-const EventCard = ({ event }) => {
-  // Use main_img directly if it's a non-empty string
+// Add layoutContext prop
+const EventCard = ({ event, layoutContext = 'horizontal' }) => {
+  // Use main_img_url (as per API structure)
   const imageUrl = typeof event.main_img_url === 'string' && event.main_img_url
-    ? event.main_img_url // Use the value directly
+    ? event.main_img_url
     : null;
 
   // console.log("[EventCard] Event:", event.name, "Final URL:", imageUrl);
@@ -25,9 +26,8 @@ const EventCard = ({ event }) => {
   if (event.date) {
     try {
       const dateObj = new Date(event.date);
-      if (!isNaN(dateObj)) { // Check if date is valid
+      if (!isNaN(dateObj.getTime())) { // Use getTime() for better validation
         formattedDate = dateObj.toLocaleString('en-US', {
-          // year: 'numeric', // Keep it concise for card view
           month: 'short',
           day: 'numeric',
           hour: 'numeric',
@@ -41,12 +41,15 @@ const EventCard = ({ event }) => {
   }
 
   // Extract Event Name (handle array)
-  const eventName = Array.isArray(event.name) && event.name.length > 0
-      ? event.name[0]
-      : 'Event Name TBC';
+  const eventName = Array.isArray(event.name) ? event.name[0] : (typeof event.name === 'string' ? event.name : 'Event Name TBC');
+
+  // Determine card style based on context
+  const cardStyle = layoutContext === 'grid' 
+      ? styles.gridCard 
+      : styles.horizontalCard;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.cardBase, cardStyle]}>
       {imageUrl ? (
         <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
       ) : (
@@ -62,51 +65,55 @@ const EventCard = ({ event }) => {
 };
 
 const styles = StyleSheet.create({
-  card: {
-    width: CARD_WIDTH,
-    backgroundColor: '#FFFFFF', // Use pure white
-    borderRadius: 12, // Slightly larger radius
+  // Base styles common to both layouts
+  cardBase: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     overflow: 'hidden',
-    marginRight: CARD_MARGIN_RIGHT,
-    elevation: 4, // Slightly increased elevation
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, // Softer shadow
-    shadowRadius: 4, // Softer shadow
-    marginBottom: 5, // Add some bottom margin if needed
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    marginBottom: 10, // Consistent bottom margin for grid/horizontal
+  },
+  // Styles specific to horizontal layout
+  horizontalCard: {
+    width: HORIZONTAL_CARD_WIDTH,
+    marginRight: HORIZONTAL_CARD_MARGIN_RIGHT,
+  },
+  // Styles specific to grid layout
+  gridCard: {
+    width: '100%', // Take full width of its container (cardWrapper)
+    // marginRight is removed, spacing handled by grid padding
   },
   image: {
     width: '100%',
-    height: 160, // Slightly taller image
-    borderTopLeftRadius: 12, // Match card radius
-    borderTopRightRadius: 12, // Match card radius
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: 160,
-    backgroundColor: '#E0E0E0', // Lighter placeholder
+    height: 160, // Keep fixed height for consistency
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
+  imagePlaceholder: {
+    backgroundColor: '#E0E0E0',
+  },
   infoContainer: {
-    paddingVertical: 12, // More vertical padding
+    paddingVertical: 10, // Slightly reduced vertical padding
     paddingHorizontal: 10,
-    // backgroundColor: '#f9f9f9', // Optional subtle background
   },
   title: {
-    fontSize: 16, // Slightly larger title
-    fontWeight: '600', // Semi-bold
-    color: '#111', // Darker title color
-    marginBottom: 5,
+    fontSize: 15, // Adjusted for potentially smaller grid cards
+    fontWeight: '600',
+    color: '#111',
+    marginBottom: 4,
   },
   venue: {
-    fontSize: 14, // Slightly larger venue text
-    color: '#444', // Slightly darker grey
-    marginBottom: 8, // More space before date
+    fontSize: 13,
+    color: '#444',
+    marginBottom: 6,
   },
   date: {
-    fontSize: 13, // Slightly larger date text
-    color: '#666', // Medium grey
+    fontSize: 12,
+    color: '#666',
   },
 });
 

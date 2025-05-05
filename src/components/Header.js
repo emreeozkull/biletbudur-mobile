@@ -1,11 +1,18 @@
 import { Ionicons } from '@expo/vector-icons'; // Using Expo's vector icons
+import { useRouter } from 'expo-router'; // Import useRouter
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const Header = () => {
+  const router = useRouter(); // Initialize router
+
+  const handleLogoPress = () => {
+    router.push('/'); // Navigate to the root route (home)
+  };
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => console.log('Logo pressed')}>
+      <TouchableOpacity onPress={handleLogoPress}>
         {/* Placeholder for Logo - Replace with actual Image component later */}
         <Text style={styles.logo}>Biletbudur</Text>
         {/* <Image source={require('../assets/logo.png')} style={styles.logoImage} /> */}

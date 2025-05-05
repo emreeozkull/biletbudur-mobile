@@ -23,6 +23,13 @@ export default function RootLayout() {
           title: "Performer Details" // Default title, can be updated by the screen
         }} 
       />
+      {/* Category detail screen */}
+      <Stack.Screen 
+        name="category/[categoryName]" // Match the file structure
+        options={{ 
+          title: "Category Events" // Default title, updated by screen
+        }} 
+      />
       {/* Add other screens here if needed, e.g.: */}
       {/* <Stack.Screen name="details" options={{ title: "Details" }} /> */}
     </Stack>

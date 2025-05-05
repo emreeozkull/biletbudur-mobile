@@ -134,19 +134,21 @@ export default function Index() {
     }
   }, [popularEvents]); // Dependency array is correct
 
-  // --- Navigation Handler ---
+  // --- Navigation Handlers ---
   const handleEventPress = (rawEventId: string | number) => {
-    // Convert to string and extract the part before the underscore
     const eventIdString = String(rawEventId);
-    const uuidPart = eventIdString.split('_')[0]; 
-    
-    if (uuidPart) { // Ensure we got a valid part
-        router.push(`/event/${uuidPart}`);
+    const uuidPart = eventIdString.split('_')[0];
+    if (uuidPart) {
+      router.push(`/event/${uuidPart}`);
     } else {
-        console.warn(`Could not extract valid ID part from: ${rawEventId}`);
+      console.warn(`Could not extract valid ID part from: ${rawEventId}`);
     }
   };
-  // --- End Navigation Handler ---
+
+  const handleCategoryPress = (categoryName: string) => {
+      router.push(`/category/${encodeURIComponent(categoryName)}`);
+  };
+  // --- End Navigation Handlers ---
 
   // Add type to renderItem props
   const renderPopularItem = ({ item }: ListRenderItemInfo<Event>) => (
@@ -156,7 +158,7 @@ export default function Index() {
   );
   const renderEventCard = ({ item }: ListRenderItemInfo<Event>) => (
     <TouchableOpacity onPress={() => handleEventPress(item.id)}>
-      <EventCard event={item} />
+      <EventCard event={item} layoutContext="horizontal" />
     </TouchableOpacity>
   );
   const renderPerformerItem = ({ item }: ListRenderItemInfo<Performer>) => <PerformerItem performer={item} />;
@@ -192,11 +194,18 @@ export default function Index() {
 
           {categorizedEvents.map((category) => (
             <View key={category.name} style={styles.categorySection}>
-              <Text style={styles.categoryTitle}>{category.name}</Text>
+              <View style={styles.categoryHeaderContainer}>
+                <TouchableOpacity onPress={() => handleCategoryPress(category.name)}>
+                  <Text style={styles.categoryTitle}>{category.name}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleCategoryPress(category.name)}>
+                    <Text style={styles.seeMoreText}>See More</Text>
+                </TouchableOpacity>
+              </View>
               <FlatList
                 data={category.events}
                 renderItem={renderEventCard}
-                keyExtractor={(item) => item.id.toString()} // Ensure key is a string
+                keyExtractor={(item) => item.id.toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalListContainer}
@@ -209,7 +218,7 @@ export default function Index() {
             <FlatList
               data={dummyPerformers}
               renderItem={renderPerformerItem}
-              keyExtractor={(item) => item.id} // Ensure key is unique
+              keyExtractor={(item) => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalListContainer}
@@ -256,11 +265,21 @@ const styles = StyleSheet.create({
   categorySection: {
     marginBottom: 20,
   },
+  categoryHeaderContainer: {
+      flexDirection: 'row', 
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 15, 
+      marginBottom: 10,
+  },
   categoryTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginLeft: 15,
-    marginBottom: 10,
+  },
+  seeMoreText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#007bff', // Link color
   },
   horizontalListContainer: {
     paddingHorizontal: 15,
