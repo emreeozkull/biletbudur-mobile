@@ -1,24 +1,45 @@
 import { useRouter } from 'expo-router'; // Make sure useRouter is imported
-import React from 'react';
+import React, { useState } from 'react'; // Import useState
 import {
+    ActivityIndicator,
+    Alert,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity, // Import TouchableOpacity for custom button
-    View
+    View,
 } from 'react-native';
+import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 
 const LoginScreen = () => {
   // Basic login form state (add state management later)
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+
+  const authContextValue = useAuth(); // Get the raw context value first
+  console.log("[LoginScreen] Received auth context value:", authContextValue);
+  const { login } = authContextValue || {}; // Destructure safely
+
   const router = useRouter(); // Initialize router
 
-  const handleLogin = () => {
-    console.log('Login attempt with:', email, password);
-    // TODO: Implement actual login logic (API call, validation)
+  const handleLogin = async () => {
+    console.log("[LoginScreen] Starting login process");
+    console.log("[LoginScreen] Login function:", login);
+    console.log("[LoginScreen] Email:", email);
+    console.log("[LoginScreen] Password:", password);
+    if (!login) {
+        
+        console.error("[LoginScreen] Login function is not available from context!");
+        Alert.alert("Error", "Authentication service not ready.");
+        return;
+    }
+    setIsLoading(true);
+    await login(email, password); // Context handles success/error alert and state update
+    setIsLoading(false);
+    // Navigation is handled automatically by useProtectedRoute in AuthContext
   };
 
   const navigateToRegister = () => {
@@ -42,6 +63,7 @@ const LoginScreen = () => {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          editable={!isLoading} // Disable input when loading
         />
         <TextInput
           style={styles.input}
@@ -50,19 +72,28 @@ const LoginScreen = () => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          editable={!isLoading}
         />
 
-        {/* Custom Button */}
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Login</Text>
+        {/* Custom Button with Loading Indicator */}
+        <TouchableOpacity
+          style={[styles.loginButton, isLoading && styles.buttonDisabled]} // Style adjustments for loading
+          onPress={handleLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.loginButtonText}>Login</Text>
+          )}
         </TouchableOpacity>
 
         {/* Placeholder for other links */}
         <View style={styles.linksContainer}>
-          <TouchableOpacity onPress={() => console.log('Forgot password')}>
+          <TouchableOpacity onPress={() => console.log('Forgot password')} disabled={isLoading}>
             <Text style={styles.linkText}>Forgot Password?</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={navigateToRegister}>
+          <TouchableOpacity onPress={navigateToRegister} disabled={isLoading}>
             <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
           </TouchableOpacity>
         </View>
@@ -117,6 +148,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+  },
+  buttonDisabled: {
+      backgroundColor: '#B0D7FF', // Lighter blue when disabled
   },
   loginButtonText: {
     color: '#FFFFFF',

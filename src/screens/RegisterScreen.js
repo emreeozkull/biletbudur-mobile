@@ -1,5 +1,7 @@
-import React from 'react';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
     Platform,
@@ -9,21 +11,42 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 const RegisterScreen = () => {
-  const [name, setName] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = () => {
+  const authContextValue = useAuth();
+  console.log("[RegisterScreen] Received auth context value:", authContextValue);
+  const { register } = authContextValue || {};
+
+  const router = useRouter();
+
+  const handleRegister = async () => {
+    if (!register) {
+      console.error("[RegisterScreen] Register function is not available from context!");
+      Alert.alert("Error", "Authentication service not ready.");
+      return;
+    }
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match.");
       return;
     }
-    console.log('Register attempt with:', name, email, password);
-    // TODO: Implement actual registration logic (API call, validation)
-    Alert.alert("Success", "Registration placeholder successful!"); // Placeholder feedback
+    setIsLoading(true);
+    const result = await register({ name, email, password });
+    setIsLoading(false);
+
+    if (result.success) {
+      router.replace('/login');
+    }
+  };
+
+  const navigateToLogin = () => {
+    router.back();
   };
 
   return (
@@ -42,6 +65,7 @@ const RegisterScreen = () => {
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
+          editable={!isLoading}
         />
         <TextInput
           style={styles.input}
@@ -51,6 +75,7 @@ const RegisterScreen = () => {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          editable={!isLoading}
         />
         <TextInput
           style={styles.input}
@@ -59,6 +84,7 @@ const RegisterScreen = () => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          editable={!isLoading}
         />
         <TextInput
           style={styles.input}
@@ -67,28 +93,34 @@ const RegisterScreen = () => {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
+          editable={!isLoading}
         />
 
-        {/* Custom Button */}
-        <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-          <Text style={styles.registerButtonText}>Sign Up</Text>
-        </TouchableOpacity>
+        <TouchableOpacity
+           style={[styles.registerButton, isLoading && styles.buttonDisabled]}
+           onPress={handleRegister}
+           disabled={isLoading}
+         >
+           {isLoading ? (
+             <ActivityIndicator size="small" color="#FFFFFF" />
+           ) : (
+             <Text style={styles.registerButtonText}>Sign Up</Text>
+           )}
+         </TouchableOpacity>
 
-        {/* Placeholder for link back to login - TODO: Add navigation */}
-        {/* <TouchableOpacity onPress={() => console.log('Go to Login')}> */}
-        {/*   <Text style={styles.linkText}>Already have an account? Login</Text> */}
-        {/* </TouchableOpacity> */}
+        <TouchableOpacity onPress={navigateToLogin} disabled={isLoading} style={styles.loginLinkContainer}>
+           <Text style={styles.linkText}>Already have an account? Login</Text>
+         </TouchableOpacity>
 
       </View>
     </KeyboardAvoidingView>
   );
 };
 
-// Use similar modern styles from LoginScreen, adjust button color maybe
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F8F9FA', // Light background
+    backgroundColor: '#F8F9FA',
   },
   container: {
     flex: 1,
@@ -105,7 +137,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 30, // Reduced margin slightly
+    marginBottom: 30,
   },
   input: {
     width: '100%',
@@ -122,7 +154,7 @@ const styles = StyleSheet.create({
   registerButton: {
     width: '100%',
     paddingVertical: 15,
-    backgroundColor: '#28A745', // Example success/register color (Green)
+    backgroundColor: '#28A745',
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
@@ -132,16 +164,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
+  buttonDisabled: {
+      backgroundColor: '#A5D6A7',
+  },
   registerButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  // linkText: { // Style for login link (if added later)
-  //   color: '#007AFF',
-  //   fontSize: 14,
-  //   marginTop: 20,
-  // },
+  loginLinkContainer: {
+      marginTop: 20,
+  },
+  linkText: {
+    color: '#007AFF',
+    fontSize: 14,
+  },
 });
 
 export default RegisterScreen; 
