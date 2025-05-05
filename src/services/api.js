@@ -1,13 +1,14 @@
 import axios from 'axios';
 
 const SOLR_URL = 'https://solr.biletbudur.tr/solr/events/select?indent=true&q.op=OR&q=*%3A*&rows=20';
+const BILETBUDUR_URL = 'https://www.biletbudur.tr/scrape/api/get-all-events/';
 
 export const fetchEvents = async () => {
   try {
-    const response = await axios.get(SOLR_URL);
+    const response = await axios.get(BILETBUDUR_URL);
     // The actual event data is nested within response.data.response.docs
-    if (response.data && response.data.response && response.data.response.docs) {
-      return response.data.response.docs;
+    if (response.data && response.status === 200) {
+      return response.data;
     } else {
       console.error('Unexpected API response structure:', response.data);
       return [];

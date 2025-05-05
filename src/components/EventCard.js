@@ -9,8 +9,8 @@ const IMAGE_BASE_URL = "https://django-s3-test1.s3.eu-central-1.amazonaws.com/";
 
 const EventCard = ({ event }) => {
   // Use main_img directly if it's a non-empty string
-  const imageUrl = typeof event.main_img === 'string' && event.main_img
-    ? event.main_img // Use the value directly
+  const imageUrl = typeof event.main_img_url === 'string' && event.main_img_url
+    ? event.main_img_url // Use the value directly
     : null;
 
   // console.log("[EventCard] Event:", event.name, "Final URL:", imageUrl);
