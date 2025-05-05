@@ -43,3 +43,32 @@ export const fetchEventsByCategory = async (categoryName) => {
     return []; // Return empty array on error
   }
 }; 
+// --- New Function to fetch MORE events by category with pagination ---
+export const fetchMoreEventsByCategory = async (categoryName, startIdx) => {
+  const url = `${API_BASE_URL}/get-categories-more/`;
+  const postData = {
+    category: categoryName,
+    start_idx: startIdx,
+  };
+  console.log(`Fetching MORE events from ${url} with data:`, postData);
+  try {
+    // Use POST method and send data in the request body
+    const response = await axios.post(url, postData);
+    // Assuming the API returns the list of events directly or nested under a key
+    // Adjust response.data access if necessary based on the actual API structure
+    // e.g., if it returns { events: [...] }, use response.data.events
+    // Return the array of events (or an empty array if none found)
+    return response.data || []; 
+  } catch (error) {
+    console.error(`Error fetching more events for category ${categoryName} at index ${startIdx}:`, error);
+    // Check for specific error types if needed, e.g., 404 might mean no more data
+    if (error.response && error.response.status === 404) {
+      console.log("Received 404, assuming no more events.");
+      return []; // Return empty array to signal no more events
+    }
+    throw error; // Re-throw other errors for the component to handle
+  }
+};
+// --- End New Function ---
+
+// ... placeholder fetchEventById ...

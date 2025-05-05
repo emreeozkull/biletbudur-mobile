@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -10,7 +10,7 @@ import {
     View
 } from 'react-native';
 import EventCard from '../../src/components/EventCard';
-import { fetchEventsByCategory } from '../../src/services/api';
+import { fetchEventsByCategory, fetchMoreEventsByCategory } from '../../src/services/api';
 
 // Reuse or import the Event interface
 interface Event {
@@ -23,13 +23,18 @@ interface Event {
   description?: string;
 }
 
+const PAGE_SIZE = 25; // Number of items per request
+
 export default function CategoryDetailScreen() {
   const { categoryName: encodedCategoryName } = useLocalSearchParams<{ categoryName: string }>();
   const categoryName = encodedCategoryName ? decodeURIComponent(encodedCategoryName) : null;
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [startIdx, setStartIdx] = useState(PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(true);
   const router = useRouter(); // Initialize router
 
   useEffect(() => {
@@ -38,34 +43,64 @@ export default function CategoryDetailScreen() {
         setLoading(false);
         return;
     }
+    setLoading(true);
+    setHasMore(true);
+    setStartIdx(PAGE_SIZE);
+    setEvents([]);
+    setError(null);
 
-    const loadCategoryEvents = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Use the new category-specific fetch function
-        console.log(`Fetching events for category: ${categoryName}`);
-        const categoryEventsData: Event[] = await fetchEventsByCategory(categoryName); 
-        
-        // Assuming categoryEventsData is the array of events
-        setEvents(categoryEventsData); 
-
-      } catch (err: any) {
-        console.error(`Failed to load events for category ${categoryName}:`, err);
+    fetchEventsByCategory(categoryName)
+      .then((initialEventsData) => {
+        setEvents(initialEventsData || []);
+        if (!initialEventsData || initialEventsData.length < PAGE_SIZE) {
+          setHasMore(false);
+        }
+      })
+      .catch((err: any) => {
+        console.error(`Failed initial load for category ${categoryName}:`, err);
         setError(`Failed to load events: ${err.message}`);
-      } finally {
+      })
+      .finally(() => {
         setLoading(false);
-      }
-    };
+      });
 
-    loadCategoryEvents();
   }, [categoryName]); // Reload if categoryName changes
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !categoryName) {
+        console.log("Load more skipped:", { loadingMore, hasMore, categoryName });
+        return;
+    }
+
+    console.log(`handleLoadMore triggered, fetching from index: ${startIdx}`);
+    setLoadingMore(true);
+
+    try {
+      const moreEventsData = await fetchMoreEventsByCategory(categoryName, startIdx);
+      if (moreEventsData && moreEventsData.length > 0) {
+        setEvents(prevEvents => [...prevEvents, ...moreEventsData]);
+        setStartIdx(prevIdx => prevIdx + PAGE_SIZE);
+      } else {
+        console.log("No more events returned, setting hasMore to false.");
+        setHasMore(false);
+      }
+    } catch (err: any) {
+      console.error(`Failed to load more events for category ${categoryName}:`, err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, categoryName, startIdx]);
 
   // Set the header title dynamically
   const screenTitle = categoryName ? `${categoryName} Events` : "Category Events";
 
-  if (loading) {
-    return <ActivityIndicator size="large" color="#0000ff" style={styles.centered} />;
+  if (loading && events.length === 0) {
+    return (
+      <View style={styles.container}> 
+         <Stack.Screen options={{ title: screenTitle }} />
+         <ActivityIndicator size="large" color="#0000ff" style={styles.centered} />
+      </View>
+    );
   }
 
   if (error) {
@@ -108,6 +143,17 @@ export default function CategoryDetailScreen() {
     </View>
   );
 
+  // --- Footer Component --- 
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.footerLoadingContainer}>
+        <ActivityIndicator size="small" color="#888" />
+      </View>
+    );
+  };
+  // --- End Footer Component --- 
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: screenTitle }} />
@@ -115,10 +161,13 @@ export default function CategoryDetailScreen() {
       <FlatList
         data={events}
         renderItem={renderEventCard}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         contentContainerStyle={styles.listContainer}
         numColumns={2}
         columnWrapperStyle={styles.row}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
       />
     </View>
   );
@@ -151,4 +200,8 @@ const styles = StyleSheet.create({
      flex: 1 / 2,
      padding: 5, 
   },
+  footerLoadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  }
 });
