@@ -4,10 +4,18 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const Header = () => {
-  const router = useRouter(); // Initialize router
+  const router = useRouter(); // Get the router object
 
   const handleLogoPress = () => {
     router.push('/'); // Navigate to the root route (home)
+  };
+
+  const handleSearchPress = () => {
+    router.push('/search'); // Navigate to the search screen
+  };
+
+  const navigateToLogin = () => {
+    router.push('/login'); // Navigate to the login route (assuming it's /login based on app/(auth)/login.tsx)
   };
 
   return (
@@ -18,10 +26,10 @@ const Header = () => {
         {/* <Image source={require('../assets/logo.png')} style={styles.logoImage} /> */}
       </TouchableOpacity>
       <View style={styles.iconsContainer}>
-        <TouchableOpacity onPress={() => console.log('Search pressed')} style={styles.iconButton}>
+        <TouchableOpacity onPress={handleSearchPress} style={styles.iconButton}>
           <Ionicons name="search" size={24} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Account pressed')} style={styles.iconButton}>
+        <TouchableOpacity onPress={navigateToLogin} style={styles.iconButton}>
           <Ionicons name="person-circle-outline" size={24} color="black" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => console.log('Menu pressed')} style={styles.iconButton}>

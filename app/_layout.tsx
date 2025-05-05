@@ -30,6 +30,13 @@ export default function RootLayout() {
           title: "Category Events" // Default title, updated by screen
         }} 
       />
+      {/* Search screen */}
+      <Stack.Screen 
+        name="search" // Corresponds to app/search.tsx
+        options={{ 
+          title: "Search" // Default title, screen can override
+        }} 
+      />
       {/* Add other screens here if needed, e.g.: */}
       {/* <Stack.Screen name="details" options={{ title: "Details" }} /> */}
     </Stack>

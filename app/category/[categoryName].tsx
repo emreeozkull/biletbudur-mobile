@@ -166,7 +166,7 @@ export default function CategoryDetailScreen() {
         numColumns={2}
         columnWrapperStyle={styles.row}
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        onEndReachedThreshold={2.5}
         ListFooterComponent={renderFooter}
       />
     </View>

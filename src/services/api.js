@@ -71,4 +71,28 @@ export const fetchMoreEventsByCategory = async (categoryName, startIdx) => {
 };
 // --- End New Function ---
 
+// --- New Function for searching events ---
+export const searchEventsApi = async (query) => {
+  // Encode the query parameter for safe inclusion in the URL
+  const encodedQuery = encodeURIComponent(query);
+  const url = `https://www.biletbudur.tr/api/get-search-results?q=${encodedQuery}`;
+  console.log(`Searching events with URL: ${url}`);
+  try {
+    const response = await axios.get(url);
+    // Assuming the API returns the list of events directly or nested under a key like 'results' or 'events'
+    // Log the response to check the structure first
+    console.log("Search API Response Data:", response.data);
+    // Adjust response.data access if necessary based on the actual API structure
+    // e.g., if it returns { results: [...] }, use response.data.results
+    // For now, assume it returns the array directly:
+    return response.data.result || []; 
+  } catch (error) {
+    console.error(`Error searching events for query "${query}":`, error);
+    // Consider returning empty array or throwing error based on how you want to handle failures
+    // Returning empty for now to avoid crashing the search page on error
+    return []; 
+  }
+};
+// --- End New Function ---
+
 // ... placeholder fetchEventById ...
