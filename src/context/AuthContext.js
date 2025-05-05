@@ -34,28 +34,38 @@ function useProtectedRoute(user, loading) {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // Store user token (or decoded info)
-  const [loading, setLoading] = useState(true); // For initial token check
+  // User state now holds an object or null
+  const [user, setUser] = useState(null); // e.g., { email: '...', first_name: '...', ... }
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // On app load, check if tokens exist
-    const loadTokens = async () => {
+    const loadUserFromToken = async () => {
       try {
         const accessToken = await SecureStore.getItemAsync('accessToken');
-        // TODO: Optionally verify token validity here (e.g., decode, check expiry)
         if (accessToken) {
-          setUser(accessToken); // Or set decoded user info
+          // --- Placeholder for fetching user details from token ---
+          // In a real app, you would:
+          // 1. Decode the accessToken to get user ID/email if possible (less secure)
+          // OR (better):
+          // 2. Call an API endpoint (e.g., /api/user/me) with the token
+          //    to get the user details.
+          // For now, we'll just store a placeholder object based on the token existing.
+          // We don't have the email here, so it will be limited.
+          console.log("[AuthProvider] Token found on load. Setting placeholder user.");
+          setUser({ token: accessToken }); // Minimal user object indication
+          // Ideally, fetch full details here and update setUser again.
+        } else {
+            console.log("[AuthProvider] No token found on load.");
         }
       } catch (e) {
-        console.error("Failed to load tokens", e);
+        console.error("Failed to load token/user", e);
       } finally {
         setLoading(false);
       }
     };
-    loadTokens();
+    loadUserFromToken();
   }, []);
 
-  // Pass loading state to the hook
   useProtectedRoute(user, loading);
 
   const login = async (email, password) => {
@@ -63,38 +73,43 @@ export const AuthProvider = ({ children }) => {
     const result = await AuthApi.loginUser({ email, password });
     setLoading(false);
     if (result.success) {
-      setUser(result.data.access); // Set user state with access token
+      // --- Placeholder for setting user details after login ---
+      // Again, ideally fetch user details from an endpoint here.
+      // For now, store a basic object.
+      const loggedInUser = {
+          token: result.data.access, // Keep the token if needed
+          email: email, // We have the email from the login form
+          // Add dummy names, replace when profile fetching is implemented
+          first_name: 'Test',
+          last_name: 'User'
+      };
+      setUser(loggedInUser);
       Alert.alert("Success", "Login successful!");
-      // Navigation handled by useProtectedRoute
     } else {
-      // Handle specific error messages from API if available
       const errorMessage = result.error?.detail || result.error?.non_field_errors?.[0] || 'Invalid email or password.';
       Alert.alert("Login Failed", errorMessage);
     }
-    return result; // Return result for potential further handling in component
+    return result;
   };
 
   const register = async (userData) => {
     setLoading(true);
-    // Ensure name is split into first_name and last_name if backend expects it
     const nameParts = userData.name?.split(' ') || [];
     const apiData = {
         email: userData.email,
         password: userData.password,
-        first_name: nameParts[0] || '', // Handle cases with no space in name
-        last_name: nameParts.slice(1).join(' ') || '' // Handle cases with multiple last names or no last name
+        first_name: nameParts[0] || '',
+        last_name: nameParts.slice(1).join(' ') || ''
     };
-
     const result = await AuthApi.registerUser(apiData);
     setLoading(false);
     if (result.success) {
       Alert.alert("Success", "Registration successful! Please login.");
-      // Consider auto-login or redirect to login
+      // Potentially use result.data if register returns user details
+      // router.replace('/login'); // Already handled in RegisterScreen
     } else {
-      // Handle specific error messages from API
-      let errorMessage = 'Registration failed. Please try again.';
+       let errorMessage = 'Registration failed. Please try again.';
       if (result.error) {
-        // Example: Extract specific field errors if backend provides them
         if (result.error.email) errorMessage = `Email: ${result.error.email[0]}`;
         else if (result.error.password) errorMessage = `Password: ${result.error.password[0]}`;
         else if (typeof result.error === 'string') errorMessage = result.error;
@@ -106,19 +121,19 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     setLoading(true);
-    const result = await AuthApi.logoutUser();
+    const result = await AuthApi.logoutUser(); // Clears tokens
     if (result.success) {
-        setUser(null); // Clear user state
-        // Navigation handled by useProtectedRoute
+      setUser(null); // Clear user state object
     } else {
-        Alert.alert("Logout Failed", result.error || "Could not log out.");
+      Alert.alert("Logout Failed", result.error || "Could not log out.");
     }
     setLoading(false);
     return result;
   };
 
+  // Provide the user object in the context value
   const providerValue = { user, loading, login, register, logout };
-  console.log("[AuthProvider] Providing value:", providerValue ? Object.keys(providerValue) : null);
+  // console.log("[AuthProvider] Providing value:", providerValue ? { ...providerValue, user: !!providerValue.user } : null); // Log presence of user
 
   return (
     <AuthContext.Provider value={providerValue}>

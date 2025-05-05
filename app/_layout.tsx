@@ -14,6 +14,21 @@ export default function RootLayout() {
         <Stack.Screen name="event/[id]" options={{ title: "Event Details" }} />
         <Stack.Screen name="performer/[name]" options={{ title: "Performer Details" }} />
         <Stack.Screen name="category/[categoryName]" options={{ title: "Category Events", headerShown: true }} />
+        <Stack.Screen
+            name="profile"
+            options={{
+                title: 'My Profile',
+                headerShown: true
+            }}
+        />
+        <Stack.Screen
+            name="saved-event/[id]"
+            options={{
+                title: 'Saved Event',
+                headerShown: true,
+                presentation: 'modal'
+            }}
+        />
       </Stack>
     </AuthProvider>
   );

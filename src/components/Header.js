@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons'; // Using Expo's vector icons
 import { useRouter } from 'expo-router'; // Import useRouter
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 
 const Header = () => {
   const router = useRouter(); // Get the router object
+  const { user } = useAuth(); // Get user state from context
 
   const handleLogoPress = () => {
     router.push('/'); // Navigate to the root route (home)
@@ -18,6 +20,10 @@ const Header = () => {
     router.push('/login'); // Navigate to the login route (assuming it's /login based on app/(auth)/login.tsx)
   };
 
+  const navigateToProfile = () => {
+    router.push('/profile'); // Navigate to the profile route
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={handleLogoPress}>
@@ -29,7 +35,10 @@ const Header = () => {
         <TouchableOpacity onPress={handleSearchPress} style={styles.iconButton}>
           <Ionicons name="search" size={24} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={navigateToLogin} style={styles.iconButton}>
+        <TouchableOpacity
+          onPress={user ? navigateToProfile : navigateToLogin}
+          style={styles.iconButton}
+        >
           <Ionicons name="person-circle-outline" size={24} color="black" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => console.log('Menu pressed')} style={styles.iconButton}>
