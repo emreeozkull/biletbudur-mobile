@@ -121,5 +121,112 @@ export const fetchPastFavoriteEvents = async () => {
     }
 };
 
-// Add function for refreshing token later if needed
-// export const refreshToken = async () => { ... }; 
+// --- NEW --- Refresh Token Function
+// This uses the unauthenticated client because it doesn't need the (likely expired) access token
+const refreshToken = async () => {
+    console.log("[API] Attempting to refresh token...");
+    try {
+        const currentRefreshToken = await SecureStore.getItemAsync('refreshToken');
+        if (!currentRefreshToken) {
+            console.log("[API] No refresh token found.");
+            return { success: false, error: 'No refresh token available' };
+        }
+
+        const response = await authApiClient.post('token/refresh/', {
+            refresh: currentRefreshToken
+        });
+
+        const newAccessToken = response.data.access;
+        if (newAccessToken) {
+            console.log("[API] Token refreshed successfully.");
+            await SecureStore.setItemAsync('accessToken', newAccessToken);
+            // Note: Some backends might also issue a new refresh token here.
+            // If so, you'd need to store response.data.refresh as well.
+            return { success: true, accessToken: newAccessToken };
+        } else {
+            throw new Error("New access token not received");
+        }
+    } catch (error) {
+        console.error("[API] Token refresh failed:", error.response?.data || error.message);
+        // Clear tokens if refresh fails (likely refresh token expired)
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('refreshToken');
+        return { success: false, error: error.response?.data || 'Refresh failed' };
+    }
+};
+
+// Variable to prevent multiple concurrent refresh attempts
+let isRefreshing = false;
+// Array to hold requests waiting for token refresh
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
+// Add Response Interceptor for handling token expiry
+apiClient.interceptors.response.use(
+    (response) => {
+        // Any status code within 2xx range cause this function to trigger
+        return response;
+    },
+    async (error) => {
+        const originalRequest = error.config;
+        // Check for 401/403 and specific error code if backend provides it
+        const statusCode = error.response?.status;
+        const errorCode = error.response?.data?.code; // e.g., "token_not_valid"
+
+        // Avoid retry loops for token refresh requests themselves
+        if (originalRequest.url === authApiClient.defaults.baseURL + 'token/refresh/') {
+            return Promise.reject(error);
+        }
+
+        if ((statusCode === 401 || statusCode === 403) && errorCode === 'token_not_valid' && !originalRequest._retry) {
+            if (isRefreshing) {
+                // If already refreshing, queue the request
+                return new Promise(function(resolve, reject) {
+                    failedQueue.push({resolve, reject});
+                }).then(token => {
+                    originalRequest.headers['Authorization'] = 'Bearer ' + token;
+                    return apiClient(originalRequest);
+                }).catch(err => {
+                    return Promise.reject(err); // Propagate the error if refresh failed
+                });
+            }
+
+            console.log("[Interceptor] Access token expired or invalid. Attempting refresh...");
+            originalRequest._retry = true; // Mark request to prevent infinite retry loops
+            isRefreshing = true;
+
+            const refreshResult = await refreshToken();
+
+            if (refreshResult.success) {
+                console.log("[Interceptor] Token refreshed. Retrying original request...");
+                isRefreshing = false;
+                // Update the Authorization header for the waiting queue and the current request
+                apiClient.defaults.headers.common['Authorization'] = 'Bearer ' + refreshResult.accessToken;
+                originalRequest.headers['Authorization'] = 'Bearer ' + refreshResult.accessToken;
+                processQueue(null, refreshResult.accessToken);
+                return apiClient(originalRequest); // Retry the original request with the new token
+            } else {
+                console.log("[Interceptor] Token refresh failed. Clearing queue and rejecting.");
+                isRefreshing = false;
+                processQueue(refreshResult.error || new Error('Token refresh failed'), null);
+                // Optionally trigger logout globally here
+                // await logoutUser(); // This might cause issues if called from context
+                // Need a way to signal logout to AuthContext
+                return Promise.reject(refreshResult.error || error);
+            }
+        }
+
+        // For other errors, just reject
+        return Promise.reject(error);
+    }
+); 

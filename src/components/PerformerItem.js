@@ -1,21 +1,24 @@
-import { Link } from 'expo-router';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Placeholder image - replace with actual performer images if available
-const placeholderImage = require('@/assets/images/icon.png'); // Adjust path if needed, ensure icon.png exists or use another placeholder
+// Adjust props to include onPress
+const PerformerItem = ({ performer, onPress }) => {
+  // Placeholder image logic (adapt if API provides image_url)
+  const initials = (performer.name?.[0] || '?').toUpperCase();
+  const imageUrl = performer.image_url; // Use image_url if available
 
-const PerformerItem = ({ performer }) => {
   return (
-    <Link href={`/performer/${performer.id}`} asChild>
-      <TouchableOpacity style={styles.container}>
-        <Image
-          source={performer.imageUrl ? { uri: performer.imageUrl } : placeholderImage}
-          style={styles.image}
-        />
-        <Text style={styles.name}>{performer.name}</Text>
-      </TouchableOpacity>
-    </Link>
+    // Add onPress to the TouchableOpacity
+    <TouchableOpacity style={styles.container} onPress={onPress}>
+      {imageUrl ? (
+         <Image source={{ uri: imageUrl }} style={styles.avatar} />
+      ) : (
+         <View style={styles.avatar}>
+             <Text style={styles.avatarText}>{initials}</Text>
+         </View>
+      )}
+      <Text style={styles.name} numberOfLines={2}>{performer.name || 'Unknown'}</Text>
+    </TouchableOpacity>
   );
 };
 
@@ -23,14 +26,22 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     marginRight: 15,
-    width: 80, // Fixed width for consistency
+    width: 80, // Reverted to original width for consistency
   },
-  image: {
+  avatar: {
     width: 60,
     height: 60,
     borderRadius: 30, // Make it circular
-    backgroundColor: '#eee',
+    backgroundColor: '#eee', // Placeholder background
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 5,
+    overflow: 'hidden', // Ensure image respects border radius
+  },
+  avatarText: {
+    color: '#555', // Darker text for light background
+    fontSize: 24,
+    fontWeight: '600',
   },
   name: {
     fontSize: 12,

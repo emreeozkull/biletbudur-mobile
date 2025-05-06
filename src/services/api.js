@@ -4,6 +4,16 @@ const SOLR_URL = 'https://solr.biletbudur.tr/solr/events/select?indent=true&q.op
 const BILETBUDUR_URL = 'https://www.biletbudur.tr/scrape/api/get-all-events/';
 const API_BASE_URL = 'https://www.biletbudur.tr/scrape/api';
 
+// Unauthenticated client for general data fetching
+const apiClient = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 5000,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    }
+});
+
 export const fetchEvents = async () => {
   try {
     const response = await axios.get(BILETBUDUR_URL);
@@ -96,3 +106,52 @@ export const searchEventsApi = async (query) => {
 // --- End New Function ---
 
 // ... placeholder fetchEventById ...
+
+// --- NEW --- Fetch Performer Details
+export const fetchPerformerDetails = async (performerId) => {
+    if (!performerId) return { success: false, error: 'Performer ID is required' };
+    try {
+        // Assuming endpoint: /api/performers/{id}/
+        const response = await apiClient.get(`/performers/${performerId}/`);
+        return { success: true, data: response.data };
+    } catch (error) {
+        console.error(`Fetch Performer ${performerId} Details API Error:`, error.response?.status, error.response?.data || error.message);
+        return { success: false, error: error.response?.data || 'Failed to fetch performer details' };
+    }
+};
+
+// --- NEW --- Fetch Events for a specific Performer
+export const fetchEventsForPerformer = async (performerName) => {
+    if (!performerName) return { success: false, error: 'Performer name is required' };
+    try {
+        // Assuming endpoint needs URL encoded name: /api/events/?performer_name=...
+        const encodedName = encodeURIComponent(performerName);
+        const response = await apiClient.get(`/get-performer-events/${performerName}`);
+
+        return { success: true, data: response.data }; 
+    } catch (error) {
+        //console.error(`Fetch Events for Performer ${performerName} API Error:`, error.response?.status, error.response?.data || error.message);
+        console.error(`Fetch Events for Performer ${performerName} API Error `);
+        return { success: false, error: error.response?.data || 'Failed to fetch events for performer' };
+    }
+};
+
+// --- NEW --- Fetch List of Performers
+export const fetchPerformers = async () => {
+    const url = '/performers/'; // Relative path
+    console.log('[API] Fetching performers from:', apiClient.defaults.baseURL + url);
+    try {
+        const response = await apiClient.get(url); // Use relative path
+        console.log('[API] Fetched Performers Data:', response.data);
+        return { success: true, data: response.data }; 
+    } catch (error) {
+        // Log more detailed error info
+        console.error(
+            '[API] Fetch Performers Error:', 
+            error.response?.status, // Status code
+            error.response?.data,   // Response body (if available)
+            error.message           // General error message
+        );
+        return { success: false, error: error.response?.data || 'Failed to fetch performers' };
+    }
+};

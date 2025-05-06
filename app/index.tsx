@@ -16,7 +16,7 @@ import EventCard from '../src/components/EventCard';
 import Header from '../src/components/Header';
 import PerformerItem from '../src/components/PerformerItem';
 import PopularEventItem from '../src/components/PopularEventItem';
-import { fetchEvents } from '../src/services/api';
+import { fetchEvents, fetchPerformers } from '../src/services/api';
 
 // --- Define Interfaces for State and Data ---
 interface Event {
@@ -35,25 +35,15 @@ interface CategorizedEvents {
 }
 
 interface Performer {
-  id: string;
+  id: string | number; // Allow number if API might return it
   name: string;
-  imageUrl: string | null;
+  image_url?: string | null; // Use field name from your API (e.g., image_url)
 }
 // --- End Interfaces ---
 
 const { width } = Dimensions.get('window');
 const POPULAR_CAROUSEL_ITEM_WIDTH = width * 0.9;
 const POPULAR_COUNT = 5;
-
-// Dummy Performer Data (replace with actual data source later)
-const dummyPerformers: Performer[] = [
-  { id: '1', name: 'Artist A', imageUrl: null },
-  { id: '2', name: 'Band B', imageUrl: null },
-  { id: '3', name: 'Comedian C', imageUrl: null },
-  { id: '4', name: 'DJ D', imageUrl: null },
-  { id: '5', name: 'Singer E', imageUrl: null },
-  { id: '6', name: 'Actor F', imageUrl: null },
-];
 
 // Function to group events into dummy categories
 const groupEventsByCategory = (events: Event[]): CategorizedEvents[] => {
@@ -78,7 +68,9 @@ export default function Index() {
   // Provide types for state variables
   const [popularEvents, setPopularEvents] = useState<Event[]>([]);
   const [categorizedEvents, setCategorizedEvents] = useState<CategorizedEvents[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [performers, setPerformers] = useState<Performer[]>([]); // State for performers
+  const [loadingEvents, setLoadingEvents] = useState<boolean>(true);
+  const [loadingPerformers, setLoadingPerformers] = useState<boolean>(true); // Separate loading state
   const [error, setError] = useState<string | null>(null); // Allow string errors
   const [currentPopularIndex, setCurrentPopularIndex] = useState<number>(0);
 
@@ -88,28 +80,40 @@ export default function Index() {
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
+      setLoadingEvents(true);
+      setLoadingPerformers(true);
       setError(null);
       try {
-        // Assume fetchEvents returns Event[] or handle potential errors/typing
-        const allEventsData: Event[] = await fetchEvents();
-        // Keep console log if needed for debugging
-        // console.log(
-        //   "Raw Fetched Events (first 3):",
-        //   JSON.stringify(allEventsData.slice(0, 3), null, 2)
-        // );
+        // Fetch events and performers in parallel
+        const [eventsResult, performersResult] = await Promise.all([
+            fetchEvents(),
+            fetchPerformers() // Fetch performers
+        ]);
 
+        // Process events
+        const allEventsData: Event[] = eventsResult; // Assuming fetchEvents returns Event[]
         const popular = allEventsData.slice(0, POPULAR_COUNT);
         const remainingEvents = allEventsData.slice(POPULAR_COUNT);
-
         setPopularEvents(popular);
         const groupedData = groupEventsByCategory(remainingEvents);
         setCategorizedEvents(groupedData);
-      } catch (err) {
-        setError('Failed to load data.');
-        console.error(err);
-      } finally {
-        setLoading(false);
+        setLoadingEvents(false);
+
+        // Process performers
+        if (performersResult.success) {
+            console.log('[Index] Fetched Performers State:', performersResult.data);
+            // Ensure data has id/name, adjust keyExtractor/render if needed
+            setPerformers(performersResult.data || []); 
+        } else {
+            setError(performersResult.error || 'Failed to load performers.');
+        }
+        setLoadingPerformers(false);
+
+      } catch (err: any) { // Type the catch error
+        console.error("Error loading home screen data:", err);
+        setError(err.message || 'Failed to load data.');
+        setLoadingEvents(false);
+        setLoadingPerformers(false);
       }
     };
     loadData();
@@ -161,16 +165,64 @@ export default function Index() {
       <EventCard event={item} layoutContext="horizontal" />
     </TouchableOpacity>
   );
-  const renderPerformerItem = ({ item }: ListRenderItemInfo<Performer>) => <PerformerItem performer={item} />;
+  
+  // Updated renderPerformerItem with navigation
+  const renderPerformerItem = ({ item }: ListRenderItemInfo<Performer>) => {
+      // console.log('[Index] Rendering PerformerItem for:', item); // Optional: Keep for render debugging if needed
+      if (!item?.name) return null; 
+      const performerName = item.name;
+      const encodedName = encodeURIComponent(performerName);
+      const targetUrl = `/performer/${encodedName}`; 
+      // Removed the log from here
+      
+      const handlePress = () => {
+        // Log ONLY when pressed
+        console.log(`[Index] User clicked, Navigating to: ${targetUrl}`); 
+        router.push(targetUrl as any);
+      };
+
+      return (
+          <PerformerItem 
+              performer={item} 
+              onPress={handlePress} // Use the new handler
+          />
+      );
+  };
+
+  // --- Helper to render performers list content ---
+  const renderPerformersContent = () => {
+      if (loadingPerformers) {
+          return <ActivityIndicator style={styles.loadingIndicator} size="small" color="#007AFF" />;
+      }
+      // Check for specific performer error state if needed, or use generic error
+      if (error && performers.length === 0) { 
+           return <Text style={styles.errorText}>{typeof error === 'string' ? error : 'Failed to load performers.'}</Text>;
+      }
+      if (performers.length === 0) {
+          return <Text style={styles.placeholderText}>No performers found.</Text>;
+      }
+      return (
+          <FlatList
+              data={performers}
+              renderItem={renderPerformerItem}
+              keyExtractor={(item) => String(item.id || item.name)} // Use ID if available, fallback to name
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalListContainer}
+          />
+      );
+  };
+
+  const isLoading = loadingEvents || loadingPerformers;
 
   // Use View instead of SafeAreaView as SafeArea is often handled by the layout
   return (
     <View style={styles.outerContainer}>
       <Header />
-      {loading ? (
+      {isLoading && !error ? (
         <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
-      ) : error ? (
-        <Text style={styles.errorText}>{error}</Text>
+      ) : error && popularEvents.length === 0 && performers.length === 0 ? (
+        <Text style={styles.errorText}>{typeof error === 'string' ? error : 'Failed to load data.'}</Text>
       ) : (
         // Consider using ScrollView only if content might exceed screen height
         <ScrollView style={styles.scrollView}>
@@ -215,14 +267,7 @@ export default function Index() {
 
           <View style={styles.categorySection}>
             <Text style={styles.categoryTitle}>Performers</Text>
-            <FlatList
-              data={dummyPerformers}
-              renderItem={renderPerformerItem}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalListContainer}
-            />
+            {renderPerformersContent()}
           </View>
 
         </ScrollView>
@@ -284,5 +329,16 @@ const styles = StyleSheet.create({
   horizontalListContainer: {
     paddingHorizontal: 15,
     paddingBottom: 10,
+  },
+  loadingIndicator: {
+      marginVertical: 10,
+      alignSelf: 'center',
+  },
+  placeholderText: {
+      fontSize: 14,
+      color: '#8A8A8E',
+      fontStyle: 'italic',
+      textAlign: 'center',
+      padding: 20,
   },
 });

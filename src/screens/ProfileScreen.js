@@ -2,17 +2,19 @@ import { Ionicons } from '@expo/vector-icons'; // Import icons
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react'; // Import useEffect, useState
 import {
-    ActivityIndicator,
-    Alert // Import Alert
-    ,
+  ActivityIndicator,
+  Alert // Import Alert
+  ,
 
 
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+
+
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import FavoritePerformerItem from '../components/FavoritePerformerItem'; // Import the new component
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
@@ -57,11 +59,14 @@ const ProfileScreen = () => {
       if (savedResult.success) {
         setSavedEvents(savedResult.data || []);
       } else {
-        setSavedEventsError(savedResult.error || 'Failed to load saved events.');
-        if (savedResult.status === 401) {
+        // Error message includes potential refresh failure
+        const errorMsg = savedResult.error || 'Failed to load saved events.';
+        setSavedEventsError(errorMsg);
+        // Check if the final error (after potential refresh attempt) is still auth-related
+        if (savedResult.status === 401 || errorMsg === 'Unauthorized') { 
           Alert.alert("Session Expired", "Please log in again.");
-          await logout();
-          return; // Stop further processing if logged out
+          await logout(); // Trigger logout
+          return; 
         }
       }
       setSavedEventsLoading(false);
@@ -73,11 +78,12 @@ const ProfileScreen = () => {
       if (pastResult.success) {
         setPastEvents(pastResult.data || []);
       } else {
-        setPastEventsError(pastResult.error || 'Failed to load past events.');
-        // Handle 401 for past events as well, although less critical if first call failed
-        if (pastResult.status === 401 && !savedResult.error) { // Check if not already handled
+        const errorMsg = pastResult.error || 'Failed to load past events.';
+        setPastEventsError(errorMsg);
+        if ((pastResult.status === 401 || errorMsg === 'Unauthorized') && !savedResult.error) { 
              Alert.alert("Session Expired", "Please log in again.");
              await logout();
+             return; // Exit if logged out
         }
       }
       setPastEventsLoading(false);
