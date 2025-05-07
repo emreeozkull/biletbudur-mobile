@@ -16,11 +16,4 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
-## For cursor
-this commands is used
-
-npx expo create-expo-app@3.4.2 
-npm run reset-project
-
-
 
