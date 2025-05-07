@@ -3,12 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react'; // Import useEffect, useState
 import {
   ActivityIndicator,
-  Alert // Import Alert
-  ,
-
-
-
-
+  Alert, // Import Alert
   FlatList,
   ScrollView,
   StyleSheet,
@@ -18,7 +13,11 @@ import {
 } from 'react-native';
 import FavoritePerformerItem from '../components/FavoritePerformerItem'; // Import the new component
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook
-import { fetchFavoriteEvents, fetchPastFavoriteEvents } from '../services/authApi'; // Import both API functions
+import {
+  fetchFavoriteEvents,
+  fetchFavoritePerformers,
+  fetchPastFavoriteEvents
+} from '../services/authApi'; // Import all needed API functions
 
 // Reusable Card component for sections
 const InfoCard = ({ title, iconName, children }) => (
@@ -47,46 +46,68 @@ const ProfileScreen = () => {
   const [pastEventsLoading, setPastEventsLoading] = useState(true);
   const [pastEventsError, setPastEventsError] = useState(null);
 
-  // Fetch data on mount
+  // --- NEW --- State for Favorite Performers
+  const [favoritePerformers, setFavoritePerformers] = useState([]);
+  const [favPerformersLoading, setFavPerformersLoading] = useState(true);
+  const [favPerformersError, setFavPerformersError] = useState(null);
+
+  // Fetch all data on mount
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
 
-      // Fetch Saved Events
+      // Set all loading states
       setSavedEventsLoading(true);
+      setPastEventsLoading(true);
+      setFavPerformersLoading(true);
       setSavedEventsError(null);
-      const savedResult = await fetchFavoriteEvents();
+      setPastEventsError(null);
+      setFavPerformersError(null);
+
+      let sessionValid = true; // Flag to track if session expired during fetches
+
+      const handleApiError = async (errorResult, setErrorFunc, itemName) => {
+          setErrorFunc(errorResult.error || `Failed to load ${itemName}.`);
+          if (errorResult.status === 401 || errorResult.status === 403) {
+              sessionValid = false;
+              Alert.alert("Session Expired", "Please log in again.");
+              await logout();
+          }
+      };
+
+      // Fetch all in parallel
+      const [savedResult, pastResult, favPerformersResult] = await Promise.all([
+          fetchFavoriteEvents(),
+          fetchPastFavoriteEvents(),
+          fetchFavoritePerformers()
+      ]);
+
+      // Process Saved Events
       if (savedResult.success) {
-        setSavedEvents(savedResult.data || []);
-      } else {
-        // Error message includes potential refresh failure
-        const errorMsg = savedResult.error || 'Failed to load saved events.';
-        setSavedEventsError(errorMsg);
-        // Check if the final error (after potential refresh attempt) is still auth-related
-        if (savedResult.status === 401 || errorMsg === 'Unauthorized') { 
-          Alert.alert("Session Expired", "Please log in again.");
-          await logout(); // Trigger logout
-          return; 
-        }
+          setSavedEvents(savedResult.data || []);
+      } else if (sessionValid) { // Only set error if session is still valid
+          await handleApiError(savedResult, setSavedEventsError, 'saved events');
       }
       setSavedEventsLoading(false);
+      if (!sessionValid) return; // Stop if logged out
 
-      // Fetch Past Saved Events
-      setPastEventsLoading(true);
-      setPastEventsError(null);
-      const pastResult = await fetchPastFavoriteEvents();
+      // Process Past Events
       if (pastResult.success) {
-        setPastEvents(pastResult.data || []);
-      } else {
-        const errorMsg = pastResult.error || 'Failed to load past events.';
-        setPastEventsError(errorMsg);
-        if ((pastResult.status === 401 || errorMsg === 'Unauthorized') && !savedResult.error) { 
-             Alert.alert("Session Expired", "Please log in again.");
-             await logout();
-             return; // Exit if logged out
-        }
+          setPastEvents(pastResult.data || []);
+      } else if (sessionValid) {
+          await handleApiError(pastResult, setPastEventsError, 'past events');
       }
       setPastEventsLoading(false);
+      if (!sessionValid) return; // Stop if logged out
+      
+      // Process Favorite Performers
+      if (favPerformersResult.success) {
+          // Ensure API returns objects with at least id/name for keyExtractor/render
+          setFavoritePerformers(favPerformersResult.data || []);
+      } else if (sessionValid) {
+          await handleApiError(favPerformersResult, setFavPerformersError, 'favorite performers');
+      }
+      setFavPerformersLoading(false);
     };
 
     loadData();
@@ -96,16 +117,6 @@ const ProfileScreen = () => {
     await logout();
     // Navigation back to login is handled by AuthProvider
   };
-
-  // --- Updated Placeholder Data with Dates ---
-  const favoritePerformers = [
-      { id: 'p1', name: 'Performer A Long Name', imageUrl: null },
-      { id: 'p2', name: 'Band B', imageUrl: null },
-      { id: 'p3', name: 'Comedian C', imageUrl: null },
-      { id: 'p4', name: 'DJ D', imageUrl: null },
-      { id: 'p5', name: 'Singer E', imageUrl: null },
-      { id: 'p6', name: 'Musician F', imageUrl: null },
-  ];
 
   // --- Helper function to format date (similar to EventCard) ---
   const formatEventDate = (dateString) => {
@@ -143,18 +154,34 @@ const ProfileScreen = () => {
   const initials = (firstName?.[0] || '').toUpperCase();
   const fullName = `${firstName} ${lastName}`.trim() || 'User Name';
 
-  const renderFavoritePerformer = ({ item }) => (
-      <FavoritePerformerItem 
-          performer={item} 
-          onPress={() => router.push(`/performer/${item.id}`)} // Example navigation
-      />
-  );
+  // --- Render Function for Favorite Performer Item ---
+  const renderFavoritePerformer = ({ item }) => { 
+       // Expecting item to have at least `name` and `id` (or name as key fallback)
+       // And potentially `image_url`
+      if (!item?.name) return null;
+      const performerName = item.name;
+      const encodedName = encodeURIComponent(performerName);
+      const targetUrl = `/performer/${encodedName}`;
+      
+       const handlePress = () => {
+        console.log(`[Profile] User clicked performer, Navigating to: ${targetUrl}`); 
+        router.push(targetUrl);
+      };
 
-  // --- Navigation Handler for Saved Event --- 
+      return (
+          <FavoritePerformerItem 
+              performer={item} // Pass the whole item
+              onPress={handlePress} 
+          />
+      );
+  };
+
+  // --- Navigation Handler for Saved/Past Event --- 
   const handleSavedEventPress = (event) => {
+      // Ensure event has id and needed fields for detail screen
       router.push({ 
-          pathname: `/saved-event/${event.id}`,
-          params: { eventData: JSON.stringify(event) } // Send stringified data
+          pathname: `/saved-event/${event.id}`, 
+          params: { eventData: JSON.stringify(event) } 
       });
   };
 
@@ -175,7 +202,6 @@ const ProfileScreen = () => {
             style={styles.eventItemContainer} 
             onPress={() => handleSavedEventPress(event)}
           >
-            {/* Check if event.name exists, API might return different structure */}
             <Text style={styles.listItem}>{event.name || 'Unnamed Event'}</Text> 
             <Text style={styles.listSubItem}>{formatEventDate(event.date)}</Text>
           </TouchableOpacity>
@@ -206,6 +232,30 @@ const ProfileScreen = () => {
       ));
   };
 
+  // --- NEW Helper to render Favorite Performers content ---
+  const renderFavoritePerformersContent = () => {
+      if (favPerformersLoading) {
+          return <ActivityIndicator style={styles.loadingIndicator} size="small" color="#007AFF" />;
+      }
+      if (favPerformersError) {
+          return <Text style={styles.errorText}>{favPerformersError}</Text>;
+      }
+      if (favoritePerformers.length === 0) {
+          return <Text style={styles.placeholderText}>No favorite performers yet.</Text>;
+      }
+      return (
+          <FlatList
+            data={favoritePerformers}
+            renderItem={renderFavoritePerformer}
+            // Ensure performer object has a unique id or use name
+            keyExtractor={(item) => String(item.id || item.name)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalListContainer}
+          />
+      );
+  };
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContainer}>
       {/* Profile Header */}
@@ -217,20 +267,9 @@ const ProfileScreen = () => {
         <Text style={styles.userEmail}>{email}</Text>
       </View>
 
-      {/* Favorite Performers Section - Updated to use FlatList */}
+      {/* Favorite Performers Section - Use render helper */}
       <InfoCard title="Favorite Performers" iconName="star-outline">
-        {favoritePerformers.length > 0 ? (
-          <FlatList
-            data={favoritePerformers}
-            renderItem={renderFavoritePerformer}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalListContainer}
-          />
-        ) : (
-          <Text style={styles.placeholderText}>No favorite performers yet.</Text>
-        )}
+        {renderFavoritePerformersContent()}
       </InfoCard>
 
       {/* Saved Events Section - Use render helper */}

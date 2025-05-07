@@ -11,8 +11,14 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)/login" />
         <Stack.Screen name="(auth)/register" />
         <Stack.Screen name="search" options={{ headerShown: true, title: 'Search' }} />
-        <Stack.Screen name="event/[id]" options={{ title: "Event Details" }} />
-        <Stack.Screen name="performer/[id]" options={{ title: "Performer Details" }} />
+        <Stack.Screen name="event/[id]" options={{ title: "Event Details", headerShown: true }} />
+        <Stack.Screen 
+            name="performer/[id]" 
+            options={{ 
+                title: "Performer Details",
+                headerShown: true
+            }} 
+        />
         <Stack.Screen name="category/[categoryName]" options={{ title: "Category Events", headerShown: true }} />
         <Stack.Screen
             name="profile"

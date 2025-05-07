@@ -3,6 +3,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   ScrollView,
@@ -12,8 +13,9 @@ import {
   View,
 } from 'react-native';
 import EventCard from '../components/EventCard'; // Re-use the EventCard
+import { useAuth } from '../context/AuthContext'; // To check if user is logged in
 import { fetchEventsForPerformer, fetchPerformerDetails } from '../services/api';
-
+import { addFavoritePerformer } from '../services/authApi';
 const { width } = Dimensions.get('window');
 
 const PerformerDetailScreen = () => {
@@ -23,13 +25,23 @@ const PerformerDetailScreen = () => {
       ? decodeURIComponent(Array.isArray(performerNameParam) ? performerNameParam[0] : performerNameParam)
       : null;
 
+  const { user } = useAuth(); // Get user state to enable/disable button
   const [performer, setPerformer] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFavorite, setIsFavorite] = useState(false); // Track favorite status
+  const [isUpdatingFavorite, setIsUpdatingFavorite] = useState(false); // Loading for fav action
   const router = useRouter(); // Initialize router
 
   useEffect(() => {
+    // --- TODO: Fetch initial favorite status --- 
+    // You might want to fetch if the performer is already a favorite
+    // when the component loads, possibly as part of fetchPerformerDetails 
+    // or a separate API call. Update setIsFavorite accordingly.
+    // setIsFavorite(performerData.is_favorite);
+    // ----
+    
     const loadData = async () => {
       if (!performerName) { // Check decoded name
         setError('Performer name not found.');
@@ -47,6 +59,10 @@ const PerformerDetailScreen = () => {
 
         if (detailsResult.success) {
           setPerformer(detailsResult.data);
+          // --- TODO: Set initial favorite status from detailsResult.data if available --- 
+          // if (detailsResult.data.is_favorite !== undefined) {
+          //    setIsFavorite(detailsResult.data.is_favorite);
+          // }
         } else {
           setError(detailsResult.error || 'Failed to load performer details.');
           // Optional: Set performer name from somewhere else if possible
@@ -87,6 +103,48 @@ const PerformerDetailScreen = () => {
     }
   };
 
+  // --- Add/Remove Favorite Handler --- 
+  const handleToggleFavorite = async () => {
+    if (!user) {
+        Alert.alert("Login Required", "Please log in to add favorites.", [
+            { text: "OK", onPress: () => router.push('/login') }
+        ]);
+        return;
+    }
+    if (!performerName) return;
+
+    setIsUpdatingFavorite(true);
+    
+    // --- TODO: Implement Remove Favorite API Call --- 
+    // Currently only adding. You'll need a removeFavoritePerformer API function
+    // and logic here to call the correct one based on `isFavorite` state.
+    if (isFavorite) {
+        Alert.alert("Info", "Remove favorite functionality not yet implemented.");
+        // const result = await removeFavoritePerformer(performerName);
+        // if (result.success) setIsFavorite(false);
+        // else Alert.alert("Error", result.error || "Could not remove favorite.");
+        setIsUpdatingFavorite(false); // Remove this line when implementing remove
+        return; 
+    }
+    // --- End TODO ---
+
+    const result = await addFavoritePerformer(performerName);
+    if (result.success) {
+        setIsFavorite(true); // Assume success means it's now a favorite
+        Alert.alert("Success", `${performerName} added to favorites!`);
+    } else {
+        // Handle specific errors like 401/403 which might mean logout is needed
+        if (result.status === 401 || result.status === 403) {
+            Alert.alert("Session Expired", "Please log in again.");
+            // Ideally, AuthContext handles global logout on refresh failure
+            // router.replace('/login'); // Force redirect if context didn't handle it
+        } else {
+            Alert.alert("Error", result.error || "Could not add favorite.");
+        }
+    }
+    setIsUpdatingFavorite(false);
+  };
+
   if (loading) {
     return (
       <View style={styles.centeredContainer}>
@@ -105,8 +163,25 @@ const PerformerDetailScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Update header title dynamically */}
-      <Stack.Screen options={{ title: performer?.name || 'Performer Details' }} />
+      {/* Update header title and add favorite button */}
+      <Stack.Screen 
+        options={{ 
+          title: performer?.name || 'Performer Details', 
+          headerRight: () => (
+            <TouchableOpacity onPress={handleToggleFavorite} disabled={isUpdatingFavorite || !user} style={styles.favButtonContainer}>
+              {isUpdatingFavorite ? (
+                <ActivityIndicator size="small" color="#FF3B30" />
+              ) : (
+                <Ionicons 
+                  name={isFavorite ? "heart" : "heart-outline"} 
+                  size={26} 
+                  color={isFavorite ? "#FF3B30" : (user ? "#FF3B30" : "#ccc") } 
+                />
+              )}
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
       {/* Performer Header */} 
       <View style={styles.headerContainer}>
@@ -214,6 +289,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     padding: 20,
+  },
+  favButtonContainer: {
+      marginRight: 15,
+      padding: 5, // Increase tappable area
   },
 });
 

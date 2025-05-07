@@ -113,11 +113,69 @@ export const fetchPastFavoriteEvents = async () => {
         return { success: true, data: response.data };
     } catch (error) {
         console.error('Fetch Past Favorites API Error:', error.response?.status, error.response?.data || error.message);
-        if (error.response?.status === 401) {
+        if (error.response?.status === 401 || error.response?.status === 403) { // Check for 403 as well
             console.warn("Access token likely expired. Refresh needed.");
-            return { success: false, error: 'Unauthorized', status: 401 };
+            return { success: false, error: 'Unauthorized', status: error.response.status };
         }
         return { success: false, error: error.response?.data || 'Failed to fetch past favorites' };
+    }
+};
+
+// Fetch Favorite Performers (uses authenticated client)
+export const fetchFavoritePerformers = async () => {
+    try {
+        const response = await apiClient.get('/scrape/api/get-favorite-performers/');
+        return { success: true, data: response.data }; 
+    } catch (error) {
+        console.error('Fetch Favorite Performers API Error:', error.response?.status, error.response?.data || error.message);
+        if (error.response?.status === 401 || error.response?.status === 403) {
+            console.warn("Access token likely expired. Refresh needed.");
+            return { success: false, error: 'Unauthorized', status: error.response.status };
+        }
+        return { success: false, error: error.response?.data || 'Failed to fetch favorite performers' };
+    }
+};
+
+// --- NEW --- Add Performer to Favorites (uses authenticated client)
+export const addFavoritePerformer = async (performerName) => {
+    if (!performerName) return { success: false, error: 'Performer name is required' };
+    
+    const endpoint = `/scrape/api/add-favorite-perfomer/${performerName}`;
+    const fullUrl = `${apiClient.defaults.baseURL}${endpoint}`;
+
+    console.log(`[API] Attempting to add favorite performer: ${performerName}`);
+    console.log(`[API] Request URL: GET ${fullUrl}`);
+
+    try {
+        // Endpoint: /scrape/api/add-favorite-performer/
+        // Body contains { performer_id: name } // Note: user requirement was performer_id, implemented as performer_name
+        const response = await apiClient.get(endpoint);
+        console.log('[API] Add Favorite Performer Response Status:', response.status);
+        console.log('[API] Add Favorite Performer Response Data:', response.data);
+        // Assuming success if status is 2xx, response body might vary
+        return { success: true, data: response.data }; 
+    } catch (error) {
+        console.error('[API] Add Favorite Performer API Error Details:');
+        if (error.response) {
+            // Log status, data, and headers if available
+            console.error('[API] Error Status:', error.response.status);
+            console.error('[API] Error Data:', error.response.data);
+            console.error('[API] Error Headers:', error.response.headers);
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('[API] Error Request:', error.request);
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('[API] Error Message:', error.message);
+        }
+        console.error('[API] Full Error Object:', error);
+
+        if (error.response?.status === 401 || error.response?.status === 403) {
+            console.warn("Access token likely expired. Refresh needed.");
+            return { success: false, error: 'Unauthorized', status: error.response.status };
+        }
+        // Handle potential specific errors, e.g., already favorited?
+        return { success: false, error: error.response?.data || 'Failed to add favorite performer' };
     }
 };
 
@@ -181,6 +239,7 @@ apiClient.interceptors.response.use(
         const originalRequest = error.config;
         // Check for 401/403 and specific error code if backend provides it
         const statusCode = error.response?.status;
+        const errorDetail = error.response?.data?.detail; // For messages like "Authentication credentials were not provided."
         const errorCode = error.response?.data?.code; // e.g., "token_not_valid"
 
         // Avoid retry loops for token refresh requests themselves
@@ -188,7 +247,14 @@ apiClient.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        if ((statusCode === 401 || statusCode === 403) && errorCode === 'token_not_valid' && !originalRequest._retry) {
+        // Condition for attempting token refresh
+        const shouldAttemptRefresh = !originalRequest._retry && (
+            statusCode === 401 ||
+            (statusCode === 403 && errorCode === 'token_not_valid') ||
+            (statusCode === 403 && errorDetail === "Authentication credentials were not provided.")
+        );
+
+        if (shouldAttemptRefresh) {
             if (isRefreshing) {
                 // If already refreshing, queue the request
                 return new Promise(function(resolve, reject) {
